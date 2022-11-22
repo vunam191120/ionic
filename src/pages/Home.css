@@ -34,3 +34,27 @@
   font-size: 15px;
   margin-right: 5px;
 }
+
+.preview-image {
+  width: 200px;
+  height: 200px;
+  margin-left: 20px;
+  margin-bottom: 20px;
+  height: auto;
+}
+
+.preview-image-show {
+  width: 100px;
+  height: 100px;
+  margin-left: 10%;
+  height: auto;
+}
+
+.buttonLink {
+  text-decoration: none;
+}
+
+.signout-btn {
+  color: white;
+  text-transform: capitalize;
+}

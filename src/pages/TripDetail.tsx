@@ -1,28 +1,41 @@
+import { Camera, CameraResultType } from '@capacitor/camera';
 import {
   IonButton,
+  IonButtons,
+  IonCol,
   IonContent,
   IonDatetime,
+  IonGrid,
   IonHeader,
+  IonImg,
   IonInput,
   IonItem,
   IonLabel,
   IonList,
   IonPage,
   IonPopover,
+  IonRow,
   IonSelect,
   IonSelectOption,
   IonText,
   IonTitle,
   IonToolbar,
+  useIonToast,
+  useIonViewDidEnter,
 } from '@ionic/react';
+import { checkmarkCircleOutline, closeCircleOutline } from 'ionicons/icons';
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router';
+import { useHistory, useParams } from 'react-router';
+import { Link } from 'react-router-dom';
 import { getTripById, updateTrip } from '../databaseHandler';
+import { isSignIn } from '../helpers/isSignedIn';
+import { signOut } from '../helpers/signOut';
 import { Param } from '../models/Param';
 import { Trip } from '../models/Trip';
 import './TripDetail.css';
 
 const TripDetail: React.FC = () => {
+  const history = useHistory();
   const param: Param = useParams();
   const [emptyActivityName, setEmptyActivityName] = useState<boolean>(false);
   const [emptyDestination, setEmptyDesination] = useState<boolean>(false);
@@ -30,6 +43,15 @@ const TripDetail: React.FC = () => {
   const [emptyDate, setEmptyDate] = useState<boolean>(false);
   const [risky, setRisky] = useState();
   const [trip, setTrip] = useState<Trip>({});
+  const [present] = useIonToast();
+  const presentToast = (position: 'top', message: string, icon: any) => {
+    present({
+      message: message,
+      duration: 3000,
+      position: position,
+      icon: icon ? icon : checkmarkCircleOutline,
+    });
+  };
 
   useEffect(() => {
     const fetchTripById = async (id: number) => {
@@ -40,6 +62,15 @@ const TripDetail: React.FC = () => {
     fetchTripById(+param.id);
   }, [param.id]);
 
+  useIonViewDidEnter(() => {
+    if (!isSignIn()) {
+      presentToast('top', 'You have to sign in first!', closeCircleOutline);
+      setTimeout(() => {
+        history.push('/sign-in');
+      }, 500);
+    }
+  });
+
   const dateSelectedHandler = (e: any) => {
     const selectedDate = new Date(e.detail.value);
     setTrip({
@@ -47,6 +78,16 @@ const TripDetail: React.FC = () => {
       time: selectedDate.toLocaleTimeString(),
       date: selectedDate.toLocaleDateString('en-GB'),
     });
+  };
+
+  const takePhoto = async () => {
+    const image = Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: CameraResultType.Base64,
+    });
+    let image_url = `data:image/jpeg;base64,${(await image).base64String}`;
+    setTrip({ ...trip, image: image_url });
   };
 
   const handleUpdate = () => {
@@ -77,7 +118,18 @@ const TripDetail: React.FC = () => {
         await updateTrip(trip);
       };
 
-      updateNewTrip();
+      try {
+        updateNewTrip();
+        presentToast(
+          'top',
+          `Updated trip successfully!`,
+          checkmarkCircleOutline
+        );
+        // history.push('/trips');
+        console.log(trip);
+      } catch (err) {
+        presentToast('top', `Update failed!`, closeCircleOutline);
+      }
     }
   };
 
@@ -85,10 +137,18 @@ const TripDetail: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar color="primary">
-          <IonTitle>i-Explore</IonTitle>
+          <IonTitle>M-Expense</IonTitle>
+          <IonButtons slot="end">
+            <IonText>
+              <IonLabel>Hello admin@gmail.com , </IonLabel>
+              <Link to="/sign-in" className="signout-btn" onClick={signOut}>
+                sign out!
+              </Link>
+            </IonText>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
-      <IonContent fullscreen>
+      <IonContent>
         <h1 className="link-btn">Trip Detail</h1>
 
         <IonList>
@@ -200,14 +260,58 @@ const TripDetail: React.FC = () => {
             </IonItem>
           </IonList>
 
-          <IonButton
-            color="primary"
-            class="ion-margin"
-            fill="solid"
-            onClick={handleUpdate}
-          >
-            Update
-          </IonButton>
+          {/* Image */}
+          <IonItem>
+            <IonText>Image</IonText>
+            {/* Preview Image */}
+            {trip.image && (
+              <IonItem>
+                <IonImg
+                  className="uploadImage"
+                  class="preview-image"
+                  src={trip.image}
+                />
+              </IonItem>
+            )}
+            <IonButton
+              expand="block"
+              class="ion-margin"
+              onClick={() => takePhoto()}
+            >
+              Choose
+            </IonButton>
+            {trip.image && (
+              <IonButton
+                expand="block"
+                class="ion-margin"
+                onClick={() => setTrip({ ...trip, image: '' })}
+              >
+                Delete
+              </IonButton>
+            )}
+          </IonItem>
+
+          <IonGrid>
+            <IonRow>
+              <IonCol size="12" class="ion-text-center">
+                {/* Cancel */}
+                <IonButton class="ion-margin" color="light">
+                  <Link to="/trips" color="light" className="buttonLink">
+                    Cancel
+                  </Link>
+                </IonButton>
+
+                {/* Save */}
+                <IonButton
+                  class="ion-margin"
+                  color="primary"
+                  onClick={handleUpdate}
+                >
+                  Update
+                </IonButton>
+              </IonCol>
+            </IonRow>
+          </IonGrid>
         </IonList>
       </IonContent>
     </IonPage>
